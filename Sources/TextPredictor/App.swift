@@ -1,6 +1,6 @@
 // App.swift — entry point, menu-bar item, permission onboarding, trigger flow.
 //
-// M1A scope: Ctrl+Space inside Apple Notes only. Manual trigger. No
+// M1A scope: Ctrl+Space in any allowed app. Manual trigger. No
 // confidence gate, no event log, no per-app profiles, no settings UI beyond
 // the menu-bar Enable/Disable + Quit.
 
@@ -62,7 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.title = "✨…"  // loading
-        statusItem.button?.toolTip = "TextPredictor — Ctrl+Space in Notes"
+        statusItem.button?.toolTip = "TextPredictor — Ctrl+Space"
 
         let menu = NSMenu()
 
@@ -182,8 +182,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             log.debug("Trigger ignored: disabled")
             return
         }
+        guard let frontApp = NSWorkspace.shared.frontmostApplication,
+              TextPredictorConfig.allowedApps.contains(frontApp.bundleIdentifier ?? "")
+        else {
+            let app = NSWorkspace.shared.frontmostApplication
+            log.debug("Trigger ignored: \(app?.bundleIdentifier ?? "no app") not in allowed apps")
+            return
+        }
         guard let context = Capture.notesFocusContext() else {
-            log.debug("Trigger ignored: not in Notes or no focused text field")
+            log.debug("Trigger ignored: no focused text field")
             return
         }
         let trimmedBuffer = context.beforeCaret.trimmingCharacters(

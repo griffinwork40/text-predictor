@@ -1,6 +1,6 @@
 // AutoTrigger.swift — AX-observer-based always-on auto-trigger.
 //
-// Watches the Notes app for value changes in text-shaped elements and fires
+// Watches the frontmost app for value changes in text-shaped elements and fires
 // a debounced prediction callback. Ctrl+Space (Hotkeys.swift) is unchanged
 // and works as a manual override alongside this path.
 //
@@ -30,9 +30,9 @@ final class AutoTrigger {
     // import or reference to AppDelegate (testable in isolation).
     private let onFire: () -> Void
 
-    // AX observer for the Notes process.
+    // AX observer for the frontmost app.
     private var axObserver: AXObserver?
-    // The Notes app-level AX element the focus-changed notification is on.
+    // The app-level AX element the focus-changed notification is on.
     private var notesAppElement: AXUIElement?
     // The text element currently observed for value-changed notifications.
     private var observedTextElement: AXUIElement?
@@ -50,9 +50,9 @@ final class AutoTrigger {
     init(onFire: @escaping @MainActor () -> Void) {
         self.onFire = onFire
         subscribeWorkspaceNotifications()
-        // If Notes is already frontmost at launch, install immediately.
+        // If a text-capable app is already frontmost at launch, install immediately.
         if let front = NSWorkspace.shared.frontmostApplication,
-           front.bundleIdentifier == "com.apple.Notes"
+           TextPredictorConfig.allowedApps.contains(front.bundleIdentifier ?? "")
         {
             installObserver(for: front)
         }
@@ -68,9 +68,9 @@ final class AutoTrigger {
             tearDownObserver()
             autoLog.debug("AutoTrigger disabled — observer torn down")
         } else {
-            // Re-install if Notes is currently frontmost.
+            // Re-install if a text-capable app is currently frontmost.
             if let front = NSWorkspace.shared.frontmostApplication,
-               front.bundleIdentifier == "com.apple.Notes"
+               TextPredictorConfig.allowedApps.contains(front.bundleIdentifier ?? "")
             {
                 installObserver(for: front)
                 autoLog.debug("AutoTrigger re-enabled — observer reinstalled")
@@ -92,7 +92,7 @@ final class AutoTrigger {
             // Swift 6 doesn't see the Notification value crossing actor bounds.
             let app = note.userInfo?[NSWorkspace.applicationUserInfoKey]
                 as? NSRunningApplication
-            guard let self, let app, app.bundleIdentifier == "com.apple.Notes" else { return }
+            guard let self, let app, TextPredictorConfig.allowedApps.contains(app.bundleIdentifier ?? "") else { return }
             MainActor.assumeIsolated {
                 guard self.isEnabled else { return }
                 self.installObserver(for: app)
@@ -106,10 +106,10 @@ final class AutoTrigger {
         ) { [weak self] note in
             let app = note.userInfo?[NSWorkspace.applicationUserInfoKey]
                 as? NSRunningApplication
-            guard let self, let app, app.bundleIdentifier == "com.apple.Notes" else { return }
+            guard let self, let app, TextPredictorConfig.allowedApps.contains(app.bundleIdentifier ?? "") else { return }
             MainActor.assumeIsolated {
                 self.tearDownObserver()
-                autoLog.debug("AutoTrigger: Notes deactivated — observer detached")
+                autoLog.debug("AutoTrigger: app deactivated — observer detached")
             }
         }
     }
@@ -156,7 +156,7 @@ final class AutoTrigger {
 
         axObserver = obs
         notesAppElement = appElement
-        autoLog.debug("AutoTrigger: observer installed for Notes pid \(pid)")
+        autoLog.debug("AutoTrigger: observer installed for pid \(pid)")
     }
 
     private func tearDownObserver() {

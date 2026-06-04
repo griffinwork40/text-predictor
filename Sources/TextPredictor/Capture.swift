@@ -1,4 +1,4 @@
-// Capture.swift — Accessibility read of the frontmost Notes text field,
+// Capture.swift — Accessibility read of the frontmost app's text field,
 // plus synthesized typing for suggestion insertion.
 
 import AppKit
@@ -17,15 +17,16 @@ enum Capture {
         let caretLocation: Int
     }
 
-    /// Returns a FocusContext if and only if Apple Notes is frontmost
-    /// AND a text-input-shaped element is focused.
+    /// Returns a FocusContext if and only if a frontmost app is in the
+    /// allowed set AND a text-input-shaped element is focused.
     static func notesFocusContext() -> FocusContext? {
         guard let frontApp = NSWorkspace.shared.frontmostApplication else {
             log.debug("No frontmost app")
             return nil
         }
-        guard frontApp.bundleIdentifier == "com.apple.Notes" else {
-            log.debug("Frontmost is \(frontApp.bundleIdentifier ?? "?"), not Notes")
+        let bundleID = frontApp.bundleIdentifier ?? ""
+        guard TextPredictorConfig.allowedApps.contains(bundleID) else {
+            log.debug("Frontmost is \(bundleID), not in allowed apps")
             return nil
         }
 

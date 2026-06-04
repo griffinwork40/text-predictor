@@ -1,6 +1,6 @@
 # TextPredictor — M1A
 
-System-wide macOS text predictor (Apple Notes only, manual trigger).
+System-wide macOS text predictor (all apps, manual trigger).
 
 Vertical-slice spike that proves the M1 pipeline end-to-end:
 **AX read → MLX inference → ghost-text overlay → Tab accept**.
@@ -40,7 +40,7 @@ On first launch:
 
 ## Use
 
-In Apple Notes only:
+In any allowed app:
 
 - Type some text.
 - Press **Ctrl+Space** to request a continuation.
@@ -49,7 +49,8 @@ In Apple Notes only:
 - **Esc** dismisses.
 - Typing anything else dismisses.
 
-Outside Notes: nothing happens. By design.
+Outside allowed apps: nothing happens. Configure `TextPredictorConfig.allowedApps`
+in `Config.swift` to restrict to specific apps (default: all apps).
 
 ## What works in M1A
 
@@ -88,6 +89,7 @@ Sources/TextPredictor/
   Hotkeys.swift     — CGEventTap handling Ctrl+Space / Tab / Esc / others
   Overlay.swift     — NSPanel ghost-text renderer
   Inference.swift   — mlx-swift-lm wrapper + LogprobCapture
+  Config.swift      — allowedApps allowlist (default: all apps)
 build.sh
 run.sh
 ```
