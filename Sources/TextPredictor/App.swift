@@ -1,7 +1,7 @@
 // App.swift — entry point, menu-bar item, permission onboarding, trigger flow.
 //
-// M1A scope: Ctrl+Space in any allowed app. Manual trigger. No
-// confidence gate, no event log, no per-app profiles, no settings UI beyond
+// M1A scope: Ctrl+Space in any allowed app, inline ghost text, auto-debounce.
+// No confidence gate, no event log, no per-app profiles, no settings UI beyond
 // the menu-bar Enable/Disable + Quit.
 
 import AppKit
@@ -26,7 +26,7 @@ struct TextPredictorApp {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var hotkeys: Hotkeys!
-    private var overlay: Overlay!
+    private var ghostText: GhostText!
     private var autoTrigger: AutoTrigger!
     private let inference = Inference()
     private var enabled: Bool =
@@ -35,7 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         log.info("TextPredictor launching…")
-        overlay = Overlay()
+        ghostText = GhostText()
         setupStatusItem()
         promptPermissionsIfNeeded()
         installHotkeys()
@@ -62,7 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.title = "✨…"  // loading
-        statusItem.button?.toolTip = "TextPredictor — Ctrl+Space"
+        statusItem.button?.toolTip = "TextPredictor — inline ghost text"
 
         let menu = NSMenu()
 
@@ -219,7 +219,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 await MainActor.run {
                     guard let self, self.activeSession === session else { return }
-                    self.overlay.show(text: suggestion, near: context.caretRect)
+                    self.ghostText.show(text: suggestion, element: context.element)
                     session.suggestion = suggestion
                     log.debug("Showed: \(suggestion)")
                 }
@@ -235,11 +235,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let session = activeSession, let suggestion = session.suggestion else {
             return false
         }
-        overlay.hide()
+        // Insert via inline AX injection + synthesized typing — flows through
+        // the target app's regular text input pathway and respects its undo stack.
+        ghostText.accept(suggestion: suggestion)
         activeSession = nil
-        // Insert via synthesized typing — flows through Notes' regular text
-        // input pathway and respects its undo stack.
-        Capture.typeText(suggestion)
         log.info("Accepted: \(suggestion)")
         return true
     }
@@ -247,8 +246,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @discardableResult
     private func dismissSuggestion() -> Bool {
         guard let session = activeSession else { return false }
-        let wasVisible = overlay.isVisible
-        overlay.hide()
+        let wasVisible = ghostText.isActiveOrVisible
+        ghostText.dismiss()
         session.task.cancel()
         activeSession = nil
         return wasVisible
