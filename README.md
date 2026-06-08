@@ -96,3 +96,7 @@ Sources/TextPredictor/
 build.sh
 run.sh
 ```
+
+## License
+
+MIT — see [LICENSE](LICENSE).
