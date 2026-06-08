@@ -108,8 +108,18 @@ final class AutoTrigger {
                 as? NSRunningApplication
             guard let self, let app, TextPredictorConfig.isAppAllowed(app.bundleIdentifier ?? "") else { return }
             MainActor.assumeIsolated {
+                // Activation/deactivation notifications can arrive in either
+                // order. With allowedApps = ["*"], tearing down on every
+                // deactivation can remove the observer we just installed for
+                // the newly frontmost app. Only detach if the app that
+                // deactivated is the one we are currently observing.
+                guard self.isObserving(app: app) else {
+                    TextPredictorConfig.debugLog("AutoTrigger: ignored deactivate for pid \(app.processIdentifier); current observer is different")
+                    return
+                }
                 self.tearDownObserver()
                 autoLog.debug("AutoTrigger: app deactivated — observer detached")
+                TextPredictorConfig.debugLog("AutoTrigger: app deactivated — observer detached")
             }
         }
     }
@@ -117,12 +127,16 @@ final class AutoTrigger {
     // MARK: - Observer install / teardown
 
     private func installObserver(for app: NSRunningApplication) {
-        // If we already have an observer for the same PID, do nothing.
+        // If we already have an observer for the same PID, make sure the
+        // current focused text element is attached; focus may have changed
+        // within the app without a fresh app-activation event.
         if let el = notesAppElement {
             var installedPid: pid_t = 0
             AXUIElementGetPid(el, &installedPid)
             if installedPid == app.processIdentifier {
+                handleFocusChanged(element: el)
                 autoLog.debug("AutoTrigger: observer already installed for pid \(installedPid)")
+                TextPredictorConfig.debugLog("AutoTrigger: observer already installed for pid \(installedPid); refreshed focused element")
                 return
             }
         }
@@ -136,6 +150,7 @@ final class AutoTrigger {
         let err = AXObserverCreate(pid, axObserverCallback, &observer)
         guard err == .success, let obs = observer else {
             autoLog.error("AutoTrigger: AXObserverCreate failed (err \(err.rawValue)) — AX permission missing?")
+            TextPredictorConfig.debugLog("AutoTrigger: AXObserverCreate failed (err \(err.rawValue))")
             return
         }
 
@@ -146,6 +161,7 @@ final class AutoTrigger {
             selfPtr)
         guard addErr == .success else {
             autoLog.error("AutoTrigger: could not observe focus-changed (err \(addErr.rawValue))")
+            TextPredictorConfig.debugLog("AutoTrigger: could not observe focus-changed (err \(addErr.rawValue))")
             return
         }
 
@@ -156,7 +172,21 @@ final class AutoTrigger {
 
         axObserver = obs
         notesAppElement = appElement
+
+        // If the app already has focus in a text element when we install the
+        // observer, macOS may not send a new focused-element-changed event.
+        // Attach immediately so typing can auto-trigger without Ctrl+Space.
+        handleFocusChanged(element: appElement)
+
         autoLog.debug("AutoTrigger: observer installed for pid \(pid)")
+        TextPredictorConfig.debugLog("AutoTrigger: observer installed for pid \(pid)")
+    }
+
+    private func isObserving(app: NSRunningApplication) -> Bool {
+        guard let el = notesAppElement else { return false }
+        var observedPid: pid_t = 0
+        AXUIElementGetPid(el, &observedPid)
+        return observedPid == app.processIdentifier
     }
 
     private func tearDownObserver() {
@@ -192,10 +222,12 @@ final class AutoTrigger {
             selfPtr)
         guard addErr == .success else {
             autoLog.debug("AutoTrigger: could not attach value-changed (err \(addErr.rawValue))")
+            TextPredictorConfig.debugLog("AutoTrigger: could not attach value-changed (err \(addErr.rawValue))")
             return
         }
         observedTextElement = element
         autoLog.debug("AutoTrigger: value-changed observer attached to text element")
+        TextPredictorConfig.debugLog("AutoTrigger: value-changed observer attached to text element")
     }
 
     private func detachValueChangedObserver() {
@@ -227,6 +259,7 @@ final class AutoTrigger {
         let err = AXUIElementCopyAttributeValue(
             element, kAXFocusedUIElementAttribute as CFString, &focusedRef)
         guard err == .success, let focused = focusedRef else {
+            TextPredictorConfig.debugLog("AutoTrigger: focused element lookup failed (err \(err.rawValue))")
             detachValueChangedObserver()
             return
         }
@@ -238,11 +271,13 @@ final class AutoTrigger {
         let role = (roleRef as? String) ?? ""
         let textRoles: Set<String> = ["AXTextArea", "AXTextField", "AXComboBox"]
 
+        TextPredictorConfig.debugLog("AutoTrigger: focused role '\(role)'")
         if textRoles.contains(role) {
             attachValueChangedObserver(to: focusedEl)
         } else {
             detachValueChangedObserver()
             autoLog.debug("AutoTrigger: focus landed on '\(role)' — not a text element")
+            TextPredictorConfig.debugLog("AutoTrigger: focus landed on '\(role)' — not a text element")
         }
     }
 
@@ -252,6 +287,7 @@ final class AutoTrigger {
             guard let self else { return }
             MainActor.assumeIsolated {
                 autoLog.debug("AutoTrigger: debounce expired — firing prediction")
+                TextPredictorConfig.debugLog("AutoTrigger: debounce expired — firing prediction")
                 self.onFire()
             }
         }

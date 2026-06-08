@@ -32,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var enabled: Bool =
         UserDefaults.standard.object(forKey: "enabled") as? Bool ?? true
     private var activeSession: PredictionSession?
+    private var keyDebounceItem: DispatchWorkItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         log.info("TextPredictor launching…")
@@ -172,7 +173,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onTrigger: { [weak self] in self?.triggerPrediction() },
             onAccept: { [weak self] in self?.acceptSuggestion() ?? false },
             onDismiss: { [weak self] in self?.dismissSuggestion() ?? false },
-            onAnyOtherKey: { [weak self] in _ = self?.dismissSuggestion() }
+            onAnyOtherKey: { [weak self] in self?.handleOrdinaryKeypress() }
         )
         let installed = hotkeys.installIfPossible()
         TextPredictorConfig.debugLog("Hotkey tap installed: \(installed)")
@@ -182,6 +183,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - Trigger flow
+
+    private func handleOrdinaryKeypress() {
+        if ghostText.isActiveOrVisible {
+            _ = dismissSuggestion()
+        }
+
+        keyDebounceItem?.cancel()
+        let item = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            TextPredictorConfig.debugLog("KeyDebounce: expired — firing prediction")
+            self.triggerPrediction()
+        }
+        keyDebounceItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.350, execute: item)
+    }
 
     private func triggerPrediction() {
         TextPredictorConfig.debugLog(">>> triggerPrediction called")
@@ -223,16 +239,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         session.task = Task { [weak self] in
             do {
-                let raw = try await self?.inference.predict(prompt: prompt, maxTokens: 16) ?? ""
+                let raw = try await self?.inference.predict(prompt: prompt, maxTokens: 12) ?? ""
                 if Task.isCancelled { return }
-                let suggestion = Self.trimToFirstStop(raw)
+                let suggestion = Self.trimToWordLimit(Self.trimToFirstStop(raw), maxWords: 3)
                 guard !suggestion.isEmpty else {
                     log.debug("Suggestion empty after trim")
                     return
                 }
                 await MainActor.run {
                     guard let self, self.activeSession === session else { return }
-                    self.ghostText.show(text: suggestion, element: context.element)
+                    self.ghostText.show(
+                        text: suggestion,
+                        element: context.element,
+                        caretRect: context.caretRect)
                     session.suggestion = suggestion
                     log.debug("Showed: \(suggestion)")
                 }
@@ -279,6 +298,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             out.append(ch)
         }
         return out.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    static func trimToWordLimit(_ s: String, maxWords: Int) -> String {
+        let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard maxWords > 0, !trimmed.isEmpty else { return "" }
+
+        var words: [Substring] = []
+        var end = trimmed.startIndex
+        var index = trimmed.startIndex
+
+        while index < trimmed.endIndex {
+            while index < trimmed.endIndex, trimmed[index].isWhitespace {
+                index = trimmed.index(after: index)
+            }
+            guard index < trimmed.endIndex else { break }
+
+            let wordStart = index
+            while index < trimmed.endIndex, !trimmed[index].isWhitespace {
+                index = trimmed.index(after: index)
+            }
+
+            words.append(trimmed[wordStart..<index])
+            end = index
+            if words.count == maxWords { break }
+        }
+
+        return String(trimmed[..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 

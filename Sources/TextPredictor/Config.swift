@@ -16,10 +16,15 @@ enum TextPredictorConfig {
 
     nonisolated(unsafe) static func debugLog(_ msg: String) {
         guard let path = Self.debugLogFile, !path.isEmpty else { return }
-        FileManager.default.createFile(atPath: path, contents: nil, attributes: nil)
         let line = "[\(Date().ISO8601Format())] \(msg)\n"
-        if let data = line.data(using: .utf8) {
-            try? data.write(to: URL(fileURLWithPath: path), options: .atomic)
+        guard let data = line.data(using: .utf8) else { return }
+
+        if let handle = FileHandle(forWritingAtPath: path) {
+            handle.seekToEndOfFile()
+            handle.write(data)
+            try? handle.close()
+        } else {
+            FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
         }
     }
 }

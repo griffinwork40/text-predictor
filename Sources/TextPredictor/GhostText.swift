@@ -33,7 +33,7 @@ final class GhostText {
 
     /// Inject suggestion inline. The caller must pass the focused element
     /// so we can write `kAXSuggestedValuesAttribute` on it.
-    func show(text: String, element: AXUIElement) {
+    func show(text: String, element: AXUIElement, caretRect: CGRect?) {
         _tpDebug(">>> GhostText.show(text: '\(text.prefix(40))…')")
         // If we already have a pending suggestion for this element, update it.
         if isActive, textElement == element {
@@ -55,7 +55,7 @@ final class GhostText {
             // Fall back to floating panel (existing behavior).
             _tpDebug("  -> falling back to floating panel")
             floatingPanel = Overlay()
-            floatingPanel?.show(text: text, near: nil)
+            floatingPanel?.show(text: text, near: caretRect)
         }
 
         _tpDebug("  -> done (inline=\(injected))")
