@@ -4,6 +4,12 @@
 import AppKit
 import ApplicationServices
 
+// Forward-declared for logging — avoids a circular dependency with Config.swift
+// (Config.swift imports nothing; Capture.swift imports nothing from Config)
+private func _tpDebug(_ msg: String) {
+    TextPredictorConfig.debugLog(msg)
+}
+
 enum Capture {
     struct FocusContext {
         /// Text in the focused element before the current caret position.
@@ -20,13 +26,17 @@ enum Capture {
     /// Returns a FocusContext if and only if a frontmost app is in the
     /// allowed set AND a text-input-shaped element is focused.
     static func notesFocusContext() -> FocusContext? {
+        _tpDebug(">>> Capture.notesFocusContext() called")
         guard let frontApp = NSWorkspace.shared.frontmostApplication else {
             log.debug("No frontmost app")
+            _tpDebug("  -> no frontmost app")
             return nil
         }
         let bundleID = frontApp.bundleIdentifier ?? ""
-        guard TextPredictorConfig.allowedApps.contains(bundleID) else {
+        _tpDebug("  frontmost: \(bundleID) (pid: \(frontApp.processIdentifier))")
+        guard TextPredictorConfig.isAppAllowed(bundleID) else {
             log.debug("Frontmost is \(bundleID), not in allowed apps")
+            _tpDebug("  -> not in allowed apps")
             return nil
         }
 
@@ -35,8 +45,10 @@ enum Capture {
         var focusedRef: CFTypeRef?
         let focusErr = AXUIElementCopyAttributeValue(
             appElement, kAXFocusedUIElementAttribute as CFString, &focusedRef)
+        _tpDebug("  focusedUIElement: err=\(focusErr.rawValue)")
         guard focusErr == .success, let focusedRef else {
             log.debug("No focused UI element (err \(focusErr.rawValue))")
+            _tpDebug("  -> no focused element")
             return nil
         }
         let element = focusedRef as! AXUIElement
@@ -46,9 +58,11 @@ enum Capture {
         var roleRef: CFTypeRef?
         AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef)
         let role = (roleRef as? String) ?? ""
+        _tpDebug("  role: '\(role)'")
         let textRoles: Set<String> = ["AXTextArea", "AXTextField", "AXComboBox"]
         guard textRoles.contains(role) else {
             log.debug("Focused element role is '\(role)' — not a text field")
+            _tpDebug("  -> not a text role")
             return nil
         }
 
@@ -57,6 +71,7 @@ enum Capture {
         AXUIElementCopyAttributeValue(
             element, kAXSelectedTextRangeAttribute as CFString, &rangeRef)
         var caretLoc = 0
+        _tpDebug("  rangeRef exists: \(rangeRef != nil)")
         if let rv = rangeRef {
             var cfRange = CFRange()
             if AXValueGetValue(rv as! AXValue, .cfRange, &cfRange) {
@@ -79,6 +94,7 @@ enum Capture {
 
         let safeCaret = min(caretLoc, fullText.count)
         let beforeCaret = String(fullText.prefix(safeCaret))
+        _tpDebug("  fullText=\(fullText.prefix(40))… beforeCaret=\(beforeCaret.prefix(40))… caretLoc=\(caretLoc) safeCaret=\(safeCaret)")
 
         // Caret rect via parameterized AX attribute.
         let caretRect = caretRectForRange(

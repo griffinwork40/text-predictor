@@ -6,6 +6,10 @@
 
 import AppKit
 
+private func _tpDebug(_ msg: String) {
+    TextPredictorConfig.debugLog(msg)
+}
+
 @MainActor
 final class Overlay {
     private let panel: NSPanel
@@ -45,6 +49,7 @@ final class Overlay {
     /// Show ghost text at the given caret rect (AppKit screen coords).
     /// If `rect` is nil, falls back to a position near the mouse cursor.
     func show(text: String, near rect: CGRect?) {
+        _tpDebug(">>> Overlay.show(text: '\(text.prefix(40))…', rect=\(String(describing: rect))")
         label.stringValue = text
         label.sizeToFit()
         let size = label.frame.size
@@ -53,27 +58,9 @@ final class Overlay {
         if let r = rect, r.width.isFinite, r.height.isFinite,
             r.origin.x.isFinite, r.origin.y.isFinite
         {
-            // Align the panel's TOP edge with the caret rect's TOP edge in
-            // AppKit screen coords. This works for two cases that both occur
-            // in practice:
-            //
-            //  (1) AX returned a proper caret rect with height ≈ line height.
-            //      After Y-flip, r.maxY is the AppKit Y of the line's top.
-            //      Panel top → line top, panel extends down by panel.height,
-            //      text sits centered on the line. Correct.
-            //
-            //  (2) AX returned a degenerate rect (height ≈ 0). Notes does
-            //      this when the caret sits between glyphs. The AX rect's
-            //      origin.y points to the TOP of the caret line per AX
-            //      convention; after flip both minY and maxY collapse to
-            //      that point. Using r.maxY again gives the line's top.
-            //      Same result. Correct.
-            //
-            // The previous M1A revision used `r.minY` directly, which in
-            // case (2) was the line top and made the panel float one full
-            // line ABOVE the caret. That's the bug this fixes.
             let caretTopY = max(r.minY, r.maxY)
             origin = NSPoint(x: r.maxX + 2, y: caretTopY - size.height)
+            _tpDebug("  -> positioned at \(origin) (caret rect: \(r))")
             log.debug(
                 """
                 Overlay: caret rect AppKit \(NSStringFromRect(r), privacy: .public) \
@@ -86,6 +73,7 @@ final class Overlay {
             // user can at least see what was suggested.
             let mouse = NSEvent.mouseLocation
             origin = NSPoint(x: mouse.x + 16, y: mouse.y - 24)
+            _tpDebug("  -> no caret rect, using mouse pos \(mouse)")
             log.debug("Overlay: no caret rect, falling back to mouse position")
         }
 

@@ -14,6 +14,10 @@ import OSLog
 private let ghostLog = Logger(subsystem: "com.local.text-predictor", category: "ghosttext")
 private let kSuggestedValuesAttr = "AXSuggestedValues"
 
+private func _tpDebug(_ msg: String) {
+    TextPredictorConfig.debugLog(msg)
+}
+
 @MainActor
 final class GhostText {
     /// The AX element that the suggestion was injected into (nil = inactive).
@@ -30,8 +34,10 @@ final class GhostText {
     /// Inject suggestion inline. The caller must pass the focused element
     /// so we can write `kAXSuggestedValuesAttribute` on it.
     func show(text: String, element: AXUIElement) {
+        _tpDebug(">>> GhostText.show(text: '\(text.prefix(40))…')")
         // If we already have a pending suggestion for this element, update it.
         if isActive, textElement == element {
+            _tpDebug("  -> updating existing suggestion")
             _ = _setInlineSuggestion(text, on: element)
             return
         }
@@ -40,16 +46,19 @@ final class GhostText {
         isActive = true
         // Save the current field value so we can restore on dismiss.
         savedOriginalValue = _readFieldString(element)
+        _tpDebug("  -> savedOriginalValue: \((savedOriginalValue?.prefix(40)).map { "\($0)…" } ?? "nil")")
 
         // Try inline injection first.
         let injected = _setInlineSuggestion(text, on: element)
+        _tpDebug("  -> inline injection: \(injected)")
         if !injected {
             // Fall back to floating panel (existing behavior).
+            _tpDebug("  -> falling back to floating panel")
             floatingPanel = Overlay()
             floatingPanel?.show(text: text, near: nil)
         }
 
-        ghostLog.debug("GhostText: suggestion shown (inline=\(injected))")
+        _tpDebug("  -> done (inline=\(injected))")
     }
 
     // MARK: - Accept

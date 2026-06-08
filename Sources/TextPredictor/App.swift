@@ -35,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         log.info("TextPredictor launching…")
+        TextPredictorConfig.debugLog(">>> applicationDidFinishLaunching")
         ghostText = GhostText()
         setupStatusItem()
         promptPermissionsIfNeeded()
@@ -46,9 +47,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // cold-start (~550 ms).
         Task { [inference] in
             do {
+                TextPredictorConfig.debugLog(">>> Starting warmup...")
                 try await inference.warmup()
+                TextPredictorConfig.debugLog(">>> Warmup complete")
                 await MainActor.run { self.markReady() }
             } catch {
+                TextPredictorConfig.debugLog(">>> Warmup FAILED: \(error.localizedDescription)")
                 log.error("Warmup failed: \(error.localizedDescription)")
                 await MainActor.run { self.statusItem.button?.title = "✨!" }
             }
@@ -57,6 +61,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func markReady() {
         statusItem.button?.title = "✨"
+        TextPredictorConfig.debugLog(">>> markReady: status icon is now ✨")
     }
 
     private func setupStatusItem() {
@@ -170,6 +175,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onAnyOtherKey: { [weak self] in _ = self?.dismissSuggestion() }
         )
         let installed = hotkeys.installIfPossible()
+        TextPredictorConfig.debugLog("Hotkey tap installed: \(installed)")
         if !installed {
             log.warning("Could not install CGEventTap — Input Monitoring missing?")
         }
@@ -178,27 +184,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Trigger flow
 
     private func triggerPrediction() {
+        TextPredictorConfig.debugLog(">>> triggerPrediction called")
         guard enabled else {
             log.debug("Trigger ignored: disabled")
+            TextPredictorConfig.debugLog("  -> ignored: disabled")
             return
         }
         guard let frontApp = NSWorkspace.shared.frontmostApplication,
-              TextPredictorConfig.allowedApps.contains(frontApp.bundleIdentifier ?? "")
+              TextPredictorConfig.isAppAllowed(frontApp.bundleIdentifier ?? "")
         else {
             let app = NSWorkspace.shared.frontmostApplication
             log.debug("Trigger ignored: \(app?.bundleIdentifier ?? "no app") not in allowed apps")
+            TextPredictorConfig.debugLog("  -> ignored: \(app?.bundleIdentifier ?? "no app") not in allowed")
             return
         }
         guard let context = Capture.notesFocusContext() else {
             log.debug("Trigger ignored: no focused text field")
+            TextPredictorConfig.debugLog("  -> ignored: no focused text field (Capture.notesFocusContext() returned nil)")
             return
         }
         let trimmedBuffer = context.beforeCaret.trimmingCharacters(
             in: .whitespacesAndNewlines)
         guard trimmedBuffer.count >= 3 else {
             log.debug("Trigger ignored: buffer too short (\(trimmedBuffer.count) chars)")
+            TextPredictorConfig.debugLog("  -> ignored: buffer too short (\(trimmedBuffer.count) chars)")
             return
         }
+
+        TextPredictorConfig.debugLog("  -> proceeding: buffer=\(trimmedBuffer.prefix(40))…")
 
         // Cancel any in-flight session before starting a new one.
         activeSession?.task.cancel()

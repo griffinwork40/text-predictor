@@ -14,14 +14,24 @@ import Tokenizers
 
 actor Inference {
     private var container: ModelContainer?
+    
+    private func _tpDebug(_ msg: String) {
+        TextPredictorConfig.debugLog(msg)
+    }
 
     func loadIfNeeded() async throws {
-        if container != nil { return }
+        TextPredictorConfig.debugLog(">>> Inference.loadIfNeeded()")
+        if container != nil {
+            _tpDebug("  -> already loaded, skipping")
+            return
+        }
         let t0 = Date()
+        _tpDebug("  -> loading from HuggingFace Hub (Qwen3-1.7B-4bit)...")
         container = try await #huggingFaceLoadModelContainer(
             configuration: LLMRegistry.qwen3_1_7b_4bit
         )
         log.info("Model loaded in \(Date().timeIntervalSince(t0))s")
+        _tpDebug("  -> model loaded in \(Date().timeIntervalSince(t0))s")
     }
 
     /// Loads the model and runs a tiny throwaway inference so Metal kernels

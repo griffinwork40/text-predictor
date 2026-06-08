@@ -52,7 +52,7 @@ final class AutoTrigger {
         subscribeWorkspaceNotifications()
         // If a text-capable app is already frontmost at launch, install immediately.
         if let front = NSWorkspace.shared.frontmostApplication,
-           TextPredictorConfig.allowedApps.contains(front.bundleIdentifier ?? "")
+           TextPredictorConfig.isAppAllowed(front.bundleIdentifier ?? "")
         {
             installObserver(for: front)
         }
@@ -70,7 +70,7 @@ final class AutoTrigger {
         } else {
             // Re-install if a text-capable app is currently frontmost.
             if let front = NSWorkspace.shared.frontmostApplication,
-               TextPredictorConfig.allowedApps.contains(front.bundleIdentifier ?? "")
+               TextPredictorConfig.isAppAllowed(front.bundleIdentifier ?? "")
             {
                 installObserver(for: front)
                 autoLog.debug("AutoTrigger re-enabled — observer reinstalled")
@@ -92,7 +92,7 @@ final class AutoTrigger {
             // Swift 6 doesn't see the Notification value crossing actor bounds.
             let app = note.userInfo?[NSWorkspace.applicationUserInfoKey]
                 as? NSRunningApplication
-            guard let self, let app, TextPredictorConfig.allowedApps.contains(app.bundleIdentifier ?? "") else { return }
+            guard let self, let app, TextPredictorConfig.isAppAllowed(app.bundleIdentifier ?? "") else { return }
             MainActor.assumeIsolated {
                 guard self.isEnabled else { return }
                 self.installObserver(for: app)
@@ -106,7 +106,7 @@ final class AutoTrigger {
         ) { [weak self] note in
             let app = note.userInfo?[NSWorkspace.applicationUserInfoKey]
                 as? NSRunningApplication
-            guard let self, let app, TextPredictorConfig.allowedApps.contains(app.bundleIdentifier ?? "") else { return }
+            guard let self, let app, TextPredictorConfig.isAppAllowed(app.bundleIdentifier ?? "") else { return }
             MainActor.assumeIsolated {
                 self.tearDownObserver()
                 autoLog.debug("AutoTrigger: app deactivated — observer detached")
