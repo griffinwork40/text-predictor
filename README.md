@@ -2,6 +2,8 @@
 
 System-wide macOS text predictor (all apps, inline ghost text).
 
+**Landing page:** [text-predictor-three.vercel.app](https://text-predictor-three.vercel.app)
+
 Vertical-slice spike that proves the M1 pipeline end-to-end:
 **AX read → inline ghost text injection → MLX inference → Tab accept**.
 
