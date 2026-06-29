@@ -109,13 +109,13 @@
       flex: 1;
       text-align: center;
       font-size: 11px;
-      color: #444;
+      color: var(--dim); /* #888 — D1, passes 4.5:1 on #181818 */
       letter-spacing: 0.02em;
     }
 
     .demo-body {
-      padding: 24px 24px 20px;
-      min-height: 96px;
+      padding: 16px 20px; /* tightened from 24px 24px 20px — D5 */
+      min-height: 68px;   /* reduced from 96px — D5 */
       position: relative;
     }
 
@@ -125,6 +125,7 @@
       color: var(--text);
       white-space: pre-wrap;
       word-break: break-word;
+      text-align: left;
     }
 
     #ghost {
@@ -175,7 +176,7 @@
       align-items: center;
       gap: 5px;
       font-size: 11px;
-      color: #444;
+      color: var(--dim);
       opacity: 0;
       transition: opacity 200ms ease;
     }
@@ -188,7 +189,7 @@
       justify-content: center;
       font-family: var(--font);
       font-size: 10px;
-      color: #555;
+      color: var(--dim);
       background: #1a1a1a;
       border: 1px solid #2e2e2e;
       border-bottom-color: #3a3a3a;
@@ -200,7 +201,7 @@
     .demo-label {
       margin-top: 12px;
       font-size: 11px;
-      color: #333;
+      color: var(--dim); /* #888 — D1 */
       letter-spacing: 0.05em;
       text-align: center;
     }
@@ -226,6 +227,23 @@
       max-width: 580px;
     }
 
+    /* Hero inline GitHub link — D3 */
+    .hero-link {
+      display: inline-block;
+      margin-top: 22px;
+      font-size: 12px;
+      color: var(--dim); /* #888 — D1 */
+      text-decoration: none;
+      border-bottom: 1px solid #444;
+      padding-bottom: 1px;
+      transition: color 120ms, border-color 120ms;
+    }
+
+    .hero-link:hover {
+      color: var(--accent);
+      border-color: var(--accent-2);
+    }
+
     /* ─── Divider ─────────────────────────────── */
     hr {
       border: none;
@@ -243,7 +261,7 @@
       font-size: 11px;
       letter-spacing: 0.13em;
       text-transform: uppercase;
-      color: #333;
+      color: var(--dim); /* #888 — D1 */
       margin-bottom: 36px;
     }
 
@@ -257,7 +275,7 @@
 
     .fact-n {
       font-size: 11px;
-      color: var(--ghost);
+      color: var(--dim); /* #888 — D1 */
       margin-bottom: 5px;
       letter-spacing: 0.06em;
     }
@@ -325,7 +343,7 @@
       white-space: pre;
     }
 
-    .codeblock .comment { color: #3a3a3a; }
+    .codeblock .comment { color: #555; } /* raised from #3a3a3a */
     .codeblock .cmd     { color: #999; }
     .codeblock .dollar  { color: var(--ghost); user-select: none; }
 
@@ -350,7 +368,7 @@
     }
 
     .req-table td:first-child {
-      color: #444;
+      color: var(--dim); /* #888 — D1 */
       width: 150px;
       padding-right: 16px;
       flex-shrink: 0;
@@ -398,7 +416,7 @@
       display: block;
       margin-top: 14px;
       font-size: 12px;
-      color: #333;
+      color: var(--dim); /* #888 — D1 */
     }
 
     /* ─── Footer ──────────────────────────────── */
@@ -415,22 +433,36 @@
       gap: 10px;
     }
 
+    .footer-row + .footer-row {
+      margin-top: 12px;
+    }
+
     .footer-row span {
       font-size: 12px;
-      color: #2e2e2e;
+      color: var(--dim); /* #888 — D1 */
     }
 
     .footer-row a {
       font-size: 12px;
-      color: #333;
+      color: var(--dim); /* #888 — D1 */
       text-decoration: none;
       transition: color 120ms;
     }
 
-    .footer-row a:hover { color: var(--dim); }
+    .footer-row a:hover { color: #bbb; }
 
-    /* ─── Fade-in on scroll ───────────────────── */
-    .reveal {
+    .footer-afk {
+      font-size: 12px;
+      color: var(--dim); /* #888 — D1 */
+      text-decoration: none;
+      transition: color 120ms;
+    }
+
+    .footer-afk:hover { color: var(--accent); }
+
+    /* ─── Scroll reveal ───────────────────────── */
+    /* D2: opacity:0 gated behind .js-ready so static renders see all content */
+    .js-ready .reveal {
       opacity: 0;
       transform: translateY(12px);
       transition: opacity 440ms ease, transform 440ms ease;
@@ -445,20 +477,27 @@
     @media (max-width: 520px) {
       .wrap { padding: 0 20px; }
       .req-table td:first-child { width: 120px; }
+      /* D6: hide the desktop-only <br> on narrow viewports */
+      .lede h1 br { display: none; }
     }
   </style>
 </head>
+<!-- D2: add js-ready immediately so below-fold .reveal elements start hidden -->
 <body>
+<script>document.body.classList.add('js-ready');</script>
 
 <div class="wrap">
 
-  <!-- Header -->
+  <!-- D4: semantic header landmark -->
   <header>
     <div class="mark">
       <span class="mark-star">✦</span>
       TextPredictor
     </div>
   </header>
+
+  <!-- D4: main landmark wraps all primary content -->
+  <main>
 
   <!-- Demo + lede -->
   <div class="demo-wrap reveal">
@@ -488,12 +527,15 @@
   </div>
 
   <div class="lede reveal">
+    <!-- D6: <br> hidden on mobile via CSS; kept for desktop line rhythm -->
     <h1>Your Mac finishes your sentences.<br>In every app. On your chip.</h1>
     <p>TextPredictor is a system-wide text predictor for Apple Silicon. It watches what you type, waits 350ms after you stop, then suggests what comes next — inline, inside whatever app has focus, without a character leaving your machine.</p>
+    <!-- D3: hero-level GitHub link so CTA is reachable from the first viewport -->
+    <a class="hero-link" href="https://github.com/griffinwork40/text-predictor" target="_blank" rel="noopener">View on GitHub →</a>
   </div>
 
-  <!-- Facts -->
-  <section class="reveal">
+  <!-- Facts — D4: section with aria-label -->
+  <section class="reveal" aria-label="What makes it different">
     <div class="sec-label">What makes it different</div>
 
     <div class="fact">
@@ -515,8 +557,8 @@
     </div>
   </section>
 
-  <!-- How it works -->
-  <section class="how reveal">
+  <!-- How it works — D4: section with aria-label -->
+  <section class="how reveal" aria-label="How it works">
     <div class="sec-label">How it works</div>
     <p>An AX observer watches the focused text element for <code>AXValueChanged</code> events. When you stop typing for 350ms, it reads the current text up to the caret, trims to the last 3 words for context, and queues an inference request.</p>
     <p>Inference runs on a dedicated Swift actor backed by mlx-swift-lm. A new keystroke or new <code>Ctrl+Space</code> cancels any in-flight generation. When a completion arrives, it's injected as <code>kAXSuggestedValuesAttribute</code> on the focused element. If the target app doesn't support that attribute — which happens — a floating <code>NSPanel</code> appears instead.</p>
@@ -524,8 +566,8 @@
     <p>The only visible UI is a ✦ status item. There is no Dock icon, no window, no preferences pane.</p>
   </section>
 
-  <!-- Get started -->
-  <section class="reveal">
+  <!-- Get started — D4: section with aria-label -->
+  <section class="reveal" aria-label="Get started">
     <div class="sec-label">Get started</div>
     <p style="font-size:13.5px; color:var(--dim); line-height:1.72; margin-bottom:0">Clone the repo, build, and run. The model downloads on first inference.</p>
 
@@ -542,8 +584,8 @@
     <p style="font-size:13px; color:var(--dim); line-height:1.72; margin-top:0">After launch, a ✦ appears in your menu bar. Start typing in any app and pause for 350ms — or press <code style="font-family:var(--font); font-size:12px; color:#aaa; background:#171717; border:1px solid var(--border); border-radius:3px; padding:0 4px;">Ctrl+Space</code> to trigger manually.</p>
   </section>
 
-  <!-- Requirements -->
-  <section class="reveal">
+  <!-- Requirements — D4: section with aria-label -->
+  <section class="reveal" aria-label="Requirements">
     <div class="sec-label">Requirements</div>
     <table class="req-table">
       <tr>
@@ -556,11 +598,11 @@
       </tr>
       <tr>
         <td>Xcode</td>
-        <td>26 Beta with Metal Toolchain<br><span style="font-size:12px; color:#333;">xcodebuild -downloadComponent MetalToolchain</span></td>
+        <td>26 Beta with Metal Toolchain<br><span style="font-size:12px; color:#888;">xcodebuild -downloadComponent MetalToolchain</span></td>
       </tr>
       <tr>
         <td>Model weights</td>
-        <td>~2GB download, cached at<br><span style="font-size:12px; color:#333;">~/.cache/huggingface/hub/models--mlx-community--Qwen3-1.7B-4bit/</span></td>
+        <td>~2GB download, cached at<br><span style="font-size:12px; color:#888;">~/.cache/huggingface/hub/models--mlx-community--Qwen3-1.7B-4bit/</span></td>
       </tr>
       <tr>
         <td>Permissions</td>
@@ -576,11 +618,16 @@
     <span class="btn-note">Open source · MIT License · Build from source</span>
   </div>
 
-  <!-- Footer -->
+  </main>
+
+  <!-- D4: semantic footer landmark -->
   <footer>
     <div class="footer-row">
       <span>Made on Apple Silicon</span>
       <a href="https://github.com/griffinwork40/text-predictor" target="_blank" rel="noopener">github.com/griffinwork40/text-predictor</a>
+    </div>
+    <div class="footer-row">
+      <a class="footer-afk" href="https://agentafk.com" target="_blank" rel="noopener">Built by Agent AFK</a>
     </div>
   </footer>
 
@@ -619,13 +666,12 @@
       if (ci < s.typed.length) {
         typedEl.textContent = s.typed.slice(0, ci + 1);
         ci++;
-        // Human-ish typing: slow for first chars, variable after
         const delay = ci < 6 ? 70 : 35 + Math.random() * 40;
         setTimeout(next, delay);
       } else {
         phase = "pause";
         cursorEl.classList.add("paused");
-        setTimeout(next, 480); // simulate the 350ms debounce + inference
+        setTimeout(next, 480);
       }
 
     } else if (phase === "pause") {
@@ -636,14 +682,12 @@
       setTimeout(next, 2000);
 
     } else if (phase === "show") {
-      // Tab accept: ghost becomes real
       ghostEl.classList.add("accepted");
       tabHint.classList.remove("shown");
       phase = "accept";
       setTimeout(next, 900);
 
     } else if (phase === "accept") {
-      // Merge and clear ghost
       typedEl.textContent = s.typed + s.ghost;
       ghostEl.textContent = "";
       ghostEl.classList.remove("shown", "accepted");
@@ -652,7 +696,6 @@
       setTimeout(next, 1400);
 
     } else if (phase === "clear") {
-      // Reset for next scene
       typedEl.textContent = "";
       ghostEl.textContent = "";
       ci = 0;
@@ -662,10 +705,12 @@
     }
   }
 
-  // Start after a brief pause
   setTimeout(next, 900);
 
   // ─── Scroll reveal ─────────────────────────────────────────────────────────
+  // D2: .js-ready class already set above; just wire IntersectionObserver.
+  // Elements are visible by default (static renders, crawlers, OG previews).
+  // JS hides them via .js-ready .reveal, then reveals on scroll.
   const reveals = document.querySelectorAll(".reveal");
 
   if ("IntersectionObserver" in window) {
@@ -682,7 +727,6 @@
     );
     reveals.forEach(el => obs.observe(el));
   } else {
-    // Fallback: just show everything
     reveals.forEach(el => el.classList.add("visible"));
   }
 </script>
