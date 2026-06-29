@@ -476,7 +476,31 @@
     /* ─── Responsive ──────────────────────────── */
     @media (max-width: 520px) {
       .wrap { padding: 0 20px; }
-      .req-table td:first-child { width: 120px; }
+
+      /* Codeblock: allow long lines to wrap instead of overflowing */
+      .codeblock { overflow-x: auto; }
+      .codeblock pre {
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+
+      /* Requirements table: let label column shrink so long paths wrap */
+      .req-table td:first-child {
+        width: 90px;
+        padding-right: 12px;
+      }
+      /* Long monospace paths (HuggingFace cache path) must break */
+      .req-table td:last-child span {
+        word-break: break-all;
+      }
+
+      /* Footer: stack items full-width on narrow screens */
+      .footer-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+
       /* D6: hide the desktop-only <br> on narrow viewports */
       .lede h1 br { display: none; }
     }
@@ -528,7 +552,7 @@
 
   <div class="lede reveal">
     <!-- D6: <br> hidden on mobile via CSS; kept for desktop line rhythm -->
-    <h1>Your Mac finishes your sentences.<br>In every app. On your chip.</h1>
+    <h1>Your Mac finishes your sentences.<br> In every app. On your chip.</h1>
     <p>TextPredictor is a system-wide text predictor for Apple Silicon. It watches what you type, waits 350ms after you stop, then suggests what comes next — inline, inside whatever app has focus, without a character leaving your machine.</p>
     <!-- D3: hero-level GitHub link so CTA is reachable from the first viewport -->
     <a class="hero-link" href="https://github.com/griffinwork40/text-predictor" target="_blank" rel="noopener">View on GitHub →</a>
