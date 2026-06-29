@@ -1,0 +1,21 @@
+# Swift build artifacts — not needed for static deployment
+.build/
+xcode-build/
+.swiftpm/
+
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+
+# macOS
+.DS_Store
+
+# AFK worktrees
+.afk-worktrees/
+
+# Sources and build scripts — only index.html is served
+Sources/
+Package.swift
+Package.resolved
+build.sh
+run.sh
