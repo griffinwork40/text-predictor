@@ -4,3 +4,4 @@ xcode-build/
 .DS_Store
 *.xcodeproj/
 .afk-worktrees/
+.vercel
